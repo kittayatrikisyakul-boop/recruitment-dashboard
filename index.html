@@ -1,0 +1,1459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recruitment Dashboard — Minth</title>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter','IBM Plex Sans Thai',sans-serif;background:#f6f5f2;color:#0b0b0b;min-height:100vh}
+/* Hero */
+.hero{background:linear-gradient(120deg,#0d366b 0%,#1c5cab 60%,#2a78d6 100%);border-radius:18px;padding:26px 32px;color:#fff;margin-bottom:22px;display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px}
+.hero h1{font-size:28px;font-weight:700;letter-spacing:-0.3px}
+.hero p{margin-top:4px;opacity:.85;font-size:14px}
+.hero .asof{background:rgba(255,255,255,.16);padding:7px 14px;border-radius:999px;font-size:13px;font-weight:500}
+/* Layout */
+.container{max-width:1400px;margin:0 auto;padding:1.4rem 2rem 3rem}
+/* Upload */
+.upload-area{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:70vh;text-align:center}
+.upload-box{border:2px dashed #2a78d6;border-radius:16px;padding:60px 80px;cursor:pointer;transition:all .3s;background:#fff}
+.upload-box:hover{border-color:#1c5cab;background:#f0f6ff;transform:translateY(-2px)}
+.upload-box.dragover{border-color:#1c5cab;background:#e8f0fe}
+.upload-icon{font-size:48px;margin-bottom:16px}
+.upload-box h2{font-size:20px;color:#0d366b;margin-bottom:8px}
+.upload-box p{color:#666;font-size:14px}
+.upload-box input[type=file]{display:none}
+.upload-actions{display:flex;gap:12px;margin-top:16px;flex-wrap:wrap;justify-content:center}
+/* KPI Grid */
+.kpi-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px;margin-bottom:22px}
+@media(max-width:1100px){.kpi-grid{grid-template-columns:repeat(3,1fr)}}
+.kpi{background:#fff;border-radius:14px;padding:16px 18px;border:1px solid #e7e5df;box-shadow:0 1px 2px rgba(0,0,0,.03);position:relative;overflow:hidden}
+.kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--accent)}
+.kpi .label{font-size:12px;font-weight:600;color:#52514e;text-transform:uppercase;letter-spacing:.5px}
+.kpi .value{font-size:32px;font-weight:700;color:#0b0b0b;line-height:1.15;margin-top:6px}
+.kpi .sub{font-size:12px;color:#8a8984;margin-top:2px}
+/* Tabs */
+.tabs{display:flex;gap:0;border-bottom:2px solid #e7e5df;margin-bottom:20px;overflow-x:auto;flex-wrap:nowrap}
+.tab{padding:12px 20px;font-size:14px;font-weight:600;color:#52514e;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .2s;white-space:nowrap}
+.tab:hover{color:#1c5cab}
+.tab.active{color:#2a78d6;border-bottom-color:#2a78d6}
+.tab-content{display:none}
+.tab-content.active{display:block}
+/* Cards */
+.card{background:#fff;border-radius:14px;padding:20px;border:1px solid #e7e5df;box-shadow:0 1px 2px rgba(0,0,0,.03);margin-bottom:20px}
+.card h3{font-size:16px;font-weight:600;color:#0b0b0b;margin-bottom:2px}
+.card .cap{font-size:12.5px;color:#8a8984;margin-bottom:12px}
+.card-row{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:900px){.card-row{grid-template-columns:1fr}}
+/* Tables */
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:#f8f7f4;padding:10px 12px;text-align:left;font-weight:600;color:#52514e;border-bottom:2px solid #e7e5df;white-space:nowrap}
+td{padding:10px 12px;border-bottom:1px solid #f0efe9}
+tr:hover td{background:#faf9f6}
+.table-scroll{max-height:500px;overflow-y:auto}
+/* Buttons */
+.btn{padding:10px 18px;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;transition:all .2s}
+.btn-primary{background:#2a78d6;color:#fff}
+.btn-primary:hover{background:#1c5cab}
+.btn-outline{background:transparent;border:1.5px solid #2a78d6;color:#2a78d6}
+.btn-outline:hover{background:#2a78d6;color:#fff}
+.btn-sm{padding:6px 12px;font-size:12px}
+/* Filters */
+.filters-bar{background:#fff;border-radius:12px;padding:14px 18px;border:1px solid #e7e5df;margin-bottom:18px;display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+.filter-group{display:flex;align-items:center;gap:6px}
+.filter-group label{font-size:12px;font-weight:600;color:#52514e}
+.filter-group select{padding:6px 10px;border:1px solid #e7e5df;border-radius:6px;font-size:12px;background:#fff;min-width:100px}
+/* Badge */
+.badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:600}
+.badge-closed{background:#e3f0fc;color:#2a78d6}
+.badge-onboarding{background:#e0f5ec;color:#1baf7a}
+.badge-open{background:#fde8e0;color:#eb6834}
+.badge-urgent{background:#fce4e4;color:#d03b3b}
+/* Metrics */
+.metrics-row{display:flex;gap:14px;margin-bottom:16px}
+.metric-box{background:#fff;border-radius:10px;padding:14px 20px;border:1px solid #e7e5df;text-align:center;flex:1}
+.metric-box .metric-label{font-size:11px;color:#8a8984;text-transform:uppercase;font-weight:600}
+.metric-box .metric-value{font-size:24px;font-weight:700;color:#0b0b0b;margin-top:4px}
+/* Key Points */
+.key-points{background:#faf9f6;border-radius:10px;padding:16px 20px;margin-bottom:16px;font-size:14px;line-height:1.7}
+.key-points strong{color:#0d366b}
+.key-points ul{margin-left:18px}
+/* Progress bar */
+.progress-bar{background:#e7e5df;border-radius:4px;height:8px;overflow:hidden;min-width:80px}
+.progress-fill{height:100%;border-radius:4px;transition:width .3s}
+/* Loading overlay */
+#loadingOverlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(246,245,242,.92);display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:16px}
+#loadingOverlay .loading-text{font-size:16px;color:#52514e;font-weight:500}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* Hidden */
+.hidden{display:none!important}
+/* Responsive */
+@media(max-width:768px){
+  .container{padding:1rem}
+  .hero{padding:18px 20px}
+  .hero h1{font-size:22px}
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+  .card-row{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <!-- Loading Overlay -->
+  <div id="loadingOverlay" class="hidden">
+    <div class="spinner" style="width:40px;height:40px;border:4px solid #e7e5df;border-top-color:#2a78d6;border-radius:50%;animation:spin .8s linear infinite"></div>
+    <div class="loading-text">Loading data...</div>
+  </div>
+
+  <!-- Upload Page -->
+  <div id="uploadPage" class="upload-area">
+    <div class="upload-box" id="uploadBox">
+      <div class="upload-icon">📊</div>
+      <h2>Recruitment Performance Dashboard</h2>
+      <p style="margin-bottom:12px;color:#888">Minth Asia Pacific · PBU · MBU · BBU</p>
+      <p style="margin-bottom:16px">
+        <strong>Default file:</strong><br>
+        <code style="background:#f0f0f0;padding:4px 8px;border-radius:4px;font-size:12px;word-break:break-all">Z:\01-HR\Recruitment Teams\Recruitment Status\Recruitment_summary-Thailand (1).xlsx</code>
+      </p>
+      <div class="upload-actions">
+        <button class="btn btn-primary" onclick="linkFile()">🔗 Link to File (auto-load)</button>
+        <button class="btn btn-outline" onclick="document.getElementById('fileInput').click()">📁 Upload File</button>
+      </div>
+      <p style="margin-top:12px;font-size:12px;color:#999">Or drag & drop file below</p>
+      <input type="file" id="fileInput" accept=".xlsx,.xls" onchange="handleFile(event)" style="display:none">
+    </div>
+  </div>
+
+  <!-- Dashboard -->
+  <div id="dashboard" class="hidden">
+    <!-- Hero -->
+    <div class="hero">
+      <div>
+        <h1>Recruitment Performance Dashboard</h1>
+        <p id="heroSubtitle">Minth Asia Pacific · PBU · MBU · BBU</p>
+      </div>
+      <div class="asof" id="asofBadge">Data as of -</div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="kpi-grid" id="mainKPIs"></div>
+
+    <!-- Filters -->
+    <div class="filters-bar">
+      <div class="filter-group">
+        <label>BU:</label>
+        <select id="filterBU" onchange="applyFilters()"><option value="">All</option></select>
+      </div>
+      <div class="filter-group">
+        <label>Department:</label>
+        <select id="filterDept" onchange="applyFilters()"><option value="">All</option></select>
+      </div>
+      <div class="filter-group">
+        <label>Worker Type:</label>
+        <select id="filterWT" onchange="applyFilters()">
+          <option value="">All</option><option value="WCW">WCW</option><option value="BCW">BCW</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Priority:</label>
+        <select id="filterPriority" onchange="applyFilters()"><option value="">All</option></select>
+      </div>
+      <div class="filter-group">
+        <label>Recruiter:</label>
+        <select id="filterRecruiter" onchange="applyFilters()"><option value="">All</option></select>
+      </div>
+      <button class="btn btn-outline btn-sm" onclick="resetFilters()">Reset</button>
+      <button class="btn btn-primary btn-sm" onclick="exportAll()">⬇ Export Excel</button>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs" id="tabBar">
+      <div class="tab active" data-tab="exec" onclick="switchTab('exec')">Executive Summary</div>
+      <div class="tab" data-tab="overview" onclick="switchTab('overview')">Overview</div>
+      <div class="tab" data-tab="sla" onclick="switchTab('sla')">Speed & SLA</div>
+      <div class="tab" data-tab="aging" onclick="switchTab('aging')">Aging</div>
+      <div class="tab" data-tab="channels" onclick="switchTab('channels')">Channels & Demand</div>
+      <div class="tab" data-tab="open" onclick="switchTab('open')">Open Positions</div>
+      <div class="tab" data-tab="trend" onclick="switchTab('trend')">Trend</div>
+      <div class="tab" data-tab="recruiters" onclick="switchTab('recruiters')">Recruiters</div>
+      <div class="tab" data-tab="k2" onclick="switchTab('k2')">K2 Compliance</div>
+    </div>
+
+    <!-- Tab Contents -->
+    <div id="tab-exec" class="tab-content active"></div>
+    <div id="tab-overview" class="tab-content"></div>
+    <div id="tab-sla" class="tab-content"></div>
+    <div id="tab-aging" class="tab-content"></div>
+    <div id="tab-channels" class="tab-content"></div>
+    <div id="tab-open" class="tab-content"></div>
+    <div id="tab-trend" class="tab-content"></div>
+    <div id="tab-recruiters" class="tab-content"></div>
+    <div id="tab-k2" class="tab-content"></div>
+  </div>
+</div>
+
+<script>
+// ==================== CONSTANTS ====================
+const C_CLOSED = "#2a78d6", C_ONB = "#1baf7a", C_OPEN = "#eb6834", C_URGENT = "#d03b3b";
+const INK = "#0b0b0b", INK2 = "#52514e", MUTED = "#8a8984", GRID = "#ecebe7";
+const BLUE_RAMP = ["#86b6ef","#5598e7","#2a78d6","#1c5cab","#104281"];
+const SLA_COLORS = {"Early ≥30d":"#1c5cab","Early 15–29d":"#5598e7","On time":"#a8a7a0","Late 1–14d":"#f2b8b5","Late 15–29d":"#ea8a87","Late 30–89d":"#e34948","Late ≥90d":"#a52a2a"};
+const SLA_ORDER = ["Early ≥30d","Early 15–29d","On time","Late 1–14d","Late 15–29d","Late 30–89d","Late ≥90d"];
+const AGE_ORDER = ["0–30 days","31–60 days","61–90 days","91–180 days",">180 days","No date · K2 submitted","No request in system (no K2)"];
+const AGE_COLORS = ["#b7d3f6","#86b6ef","#5598e7","#256abf","#104281","#c3c2b7",C_URGENT];
+const STATUS_ORDER = ["Sourcing","Interviewing","Identified","Offer Signback","Onboard"];
+const PRIORITY_ORDER = ["First Priority","Second Priority","Third Priority","Fourth Priority"];
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+const DEPT_MAP = {"Engineering Workshop 1":"Engineering","Engineering Workshop 2":"Engineering","Customs & Transportation Dept":"Customs & Transportation"};
+const POSITION_MAP = {"Intermediate Launch Engr.":"Intermediate PM Engineer","Export Specialist":"Customs Specialist","Sr. Quality Engr.":"Senior QA Engineer"};
+const RECRUITER_MAP = {"Anige":"Angie","Wararat":"Wara","China recruitment team":"Chinese recruitment team","国内":"Chinese recruitment team"};
+const HM_OVERRIDES = [
+  ["Tatpong","Production Workshop 2",null,"Zheng Wenxiao"],
+  ["Tatpong","Materials Workshop 2",null,"Zheng Wenxiao"],
+  ["Tatpong","Production Workshop 1",null,"Gu Shangniao"],
+  ["Tatpong","Materials Workshop 1",null,"Xiao Man"],
+  [null,"Purchasing","Purchasing Engineer","YUHUI ZHU"]
+];
+
+// ==================== GLOBAL STATE ====================
+let rawData = {main:[], k2:[], weekly:[], asOf:null};
+let filteredData = {main:[], k2:[], weekly:[]};
+let savedFileHandle = null;
+
+// ==================== FILE HANDLING ====================
+const DEFAULT_PATH_HINT = 'Z:\\01-HR\\Recruitment Teams\\Recruitment Status\\Recruitment_summary-Thailand (1).xlsx';
+
+async function linkFile() {
+  console.log('Opening file picker...');
+  // showOpenFilePicker only works on HTTPS/localhost, not file://
+  if(!window.showOpenFilePicker) {
+    console.log('File System Access API not available, falling back to file input');
+    document.getElementById('fileInput').click();
+    return;
+  }
+  try {
+    const [handle] = await window.showOpenFilePicker({
+      types: [{description:'Excel',accept:{'application/vnd.openxmlformats-officedocument.spreadsheetml+xml':['.xlsx'],'application/vnd.ms-excel':['.xls']}}]
+    });
+    savedFileHandle = handle;
+    await saveFileHandle(handle);
+    const file = await handle.getFile();
+    console.log('Linked file:', file.name);
+    await processFile(file);
+  } catch(e) {
+    console.error('Link file error:', e);
+    if(e.name !== 'AbortError') {
+      // Fallback to regular file input
+      console.log('Falling back to file input');
+      document.getElementById('fileInput').click();
+    }
+  }
+}
+
+function handleFile(e) {
+  const file = e.target.files[0];
+  if(file) processFile(file);
+}
+
+async function processFile(file) {
+  // Show loading overlay without destroying dashboard structure
+  const overlay = document.getElementById('loadingOverlay');
+  overlay.classList.remove('hidden');
+
+  try {
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, {type:'array', cellDates:true});
+    parseWorkbook(wb);
+
+    // Now show dashboard and render
+    document.getElementById('uploadPage').classList.add('hidden');
+    document.getElementById('dashboard').classList.remove('hidden');
+    renderDashboard();
+  } catch(e) {
+    console.error('Parse error:', e);
+    overlay.innerHTML = '<div style="text-align:center;color:#d03b3b"><p style="font-size:18px;font-weight:600;margin-bottom:8px">Error loading file</p><p style="font-size:14px">' + e.message + '</p><button class="btn btn-primary" style="margin-top:16px" onclick="location.reload()">Try Again</button></div>';
+  }
+  overlay.classList.add('hidden');
+}
+
+// ==================== DATA PARSING ====================
+function excelDateToJSDate(serial) {
+  if(!serial) return null;
+  if(serial instanceof Date) return isNaN(serial.getTime()) ? null : serial;
+  if(typeof serial === 'number') {
+    const utcDays = Math.floor(serial - 25569);
+    const d = new Date(utcDays * 86400 * 1000);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  // Try parsing as string date
+  if(typeof serial === 'string') {
+    serial = serial.trim();
+    if(!serial) return null;
+    // Try ISO format first
+    let d = new Date(serial);
+    if(!isNaN(d.getTime())) return d;
+    // Try DD/MM/YYYY or DD-MM-YYYY
+    const m = serial.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+    if(m) {
+      const year = m[3].length === 2 ? 2000 + parseInt(m[3]) : parseInt(m[3]);
+      d = new Date(year, parseInt(m[2]) - 1, parseInt(m[1]));
+      if(!isNaN(d.getTime())) return d;
+    }
+    // Try YYYY/MM/DD
+    const m2 = serial.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+    if(m2) {
+      d = new Date(parseInt(m2[1]), parseInt(m2[2]) - 1, parseInt(m2[3]));
+      if(!isNaN(d.getTime())) return d;
+    }
+    return null;
+  }
+  return null;
+}
+
+function parseStatus(raw) {
+  if(!raw) return 'Unknown';
+  const str = String(raw).trim();
+  const statuses = ["Offer Signback","Onboard","Identified","Interviewing","Sourcing","On Hold"];
+  for(const s of statuses) if(str.startsWith(s)) return s;
+  return str.split(/[\s]+/)[0];
+}
+
+function statusGroup(status, onboardDate, asOfDate) {
+  if(status === 'Onboard') return 'Closed';
+  if(status === 'Offer Signback') {
+    if(onboardDate && asOfDate && new Date(onboardDate) <= new Date(asOfDate)) return 'Closed';
+    return 'Onboarding';
+  }
+  if(['Sourcing','Interviewing','Identified'].includes(status)) return 'Open';
+  return 'Other';
+}
+
+function workerTypeFromGrade(grade) {
+  if(!grade) return 'WCW';
+  const g = String(grade).trim().toUpperCase();
+  if(g.startsWith('T') || g.startsWith('O')) return 'BCW';
+  return 'WCW';
+}
+
+function normalisePriority(p) {
+  if(!p) return 'Not set';
+  const s = String(p).trim();
+  if(s === 'Forth Priority') return 'Fourth Priority';
+  return s;
+}
+
+function mapRecruiter(r) {
+  if(!r) return 'Unknown';
+  const s = String(r).trim();
+  return RECRUITER_MAP[s] || s;
+}
+
+function cleanPosition(pos, dept) {
+  let p = String(pos || '').replace(/\s+/g,' ').trim();
+  if(dept && (dept.startsWith('Production') || dept.startsWith('Materials'))) {
+    p = p.replace(/\s*\(Workshop\s*\d\)\s*$/i, '');
+  }
+  return POSITION_MAP[p] || p;
+}
+
+function daysBucket(v) {
+  if(v === null || v === undefined || isNaN(v)) return null;
+  if(v <= -30) return "Early ≥30d";
+  if(v <= -15) return "Early 15–29d";
+  if(v <= 0) return "On time";
+  if(v < 15) return "Late 1–14d";
+  if(v < 30) return "Late 15–29d";
+  if(v < 90) return "Late 30–89d";
+  return "Late ≥90d";
+}
+
+function slaBucket(txt) {
+  if(!txt || typeof txt !== 'string') return null;
+  const t = txt.toLowerCase();
+  if(t.includes('on time')) return "On time";
+  const m = t.match(/≥\s*(\d+)/);
+  const n = m ? parseInt(m[1]) : 1;
+  if(t.includes('advance')) return n >= 30 ? "Early ≥30d" : (n >= 15 ? "Early 15–29d" : "On time");
+  if(t.includes('delay')) return n >= 90 ? "Late ≥90d" : (n >= 30 ? "Late 30–89d" : (n >= 15 ? "Late 15–29d" : "Late 1–14d"));
+  return null;
+}
+
+function ageBucket(openDays, k2Submitted) {
+  if(openDays === null || openDays === undefined) {
+    return k2Submitted === 'Yes' ? "No date · K2 submitted" : "No request in system (no K2)";
+  }
+  if(openDays <= 30) return "0–30 days";
+  if(openDays <= 60) return "31–60 days";
+  if(openDays <= 90) return "61–90 days";
+  if(openDays <= 180) return "91–180 days";
+  return ">180 days";
+}
+
+function parseDataAllBU(ws) {
+  const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:null});
+  if(rows.length < 2) return [];
+  const rawHeaders = rows[0].map(h => String(h || '').trim());
+
+  function findCol(key) {
+    for(let i = 0; i < rawHeaders.length; i++) {
+      const h = rawHeaders[i];
+      const lines = h.split('\n').map(l => l.trim());
+      for(const line of lines) {
+        if(line.toLowerCase() === key.toLowerCase()) return i;
+        if(line.includes(key)) return i;
+      }
+    }
+    return -1;
+  }
+
+  const colMap = {
+    'No': findCol('No'), 'BU': findCol('BU'), 'Company': findCol('Company'),
+    'K2 Progress': findCol('K2 Progress'), 'Department': findCol('Department'),
+    'JobTitle': findCol('JobTitle'), 'Priority': findCol('Urgency'),
+    'Recruiter': findCol('Recruiter'), 'Hiring Manager': findCol('Hiring Manager'),
+    'Job Grade': findCol('Job Grade'), 'HC Status': findCol('HC Status'),
+    'HC Released Date': findCol('HC Released Date'), 'Target Date': findCol('Target Date'),
+    'Opening Type': findCol('Opening Type'), 'object time': findCol('object time'),
+    'Recruitment Progress Type': findCol('Recruitment Progress Type'),
+    'Offer Date': findCol('Offer Date'), 'Onboarding Date': findCol('Onboarding Date'),
+    'Candidate Name': findCol('Candidate Name'), 'Recruitment Channel': findCol('Recruitment Channel'),
+    'this week': findCol('this week'), 'Interview': findCol('Interview'),
+    'Number of offers': findCol('Number of offers'), 'Number of new hires': findCol('Number of new hires'),
+    'Comment': findCol('岗位情况'),
+  };
+
+  const data = [];
+  for(let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    if(!row || row.every(c => c === null || c === undefined || c === '')) continue;
+    const obj = {};
+    for(const [key, colIdx] of Object.entries(colMap)) {
+      if(colIdx >= 0 && colIdx < row.length) obj[key] = row[colIdx];
+    }
+    obj._rowNum = i + 1;
+    data.push(obj);
+  }
+  return data;
+}
+
+function cleanMainData(rows, asOfDate) {
+  return rows.map(row => {
+    const rawStatus = row['HC Status'] || '';
+    const status = parseStatus(rawStatus);
+    const rawDept = String(row['Department'] || '').trim();
+    const dept = DEPT_MAP[rawDept] || rawDept;
+    const pos = cleanPosition(row['JobTitle'] || row['Position'], dept);
+    const hcReleasedRaw = row['HC Released Date'];
+    const targetRaw = row['Target Date'];
+    const hcReleasedDate = hcReleasedRaw ? excelDateToJSDate(hcReleasedRaw) : null;
+    const targetDate = targetRaw ? excelDateToJSDate(targetRaw) : null;
+    const offerRaw = row['Offer Date'];
+    const onboardRaw = row['Onboarding Date'];
+    const offerDate = offerRaw ? excelDateToJSDate(offerRaw) : null;
+    const onboardDate = onboardRaw ? excelDateToJSDate(onboardRaw) : null;
+    const sg = statusGroup(status, onboardDate, asOfDate);
+    let recruiter = mapRecruiter(row['Recruiter'] || '');
+    const grade = row['Job Grade'] || '';
+    const wt = workerTypeFromGrade(grade);
+    let priority = normalisePriority(row['Priority'] || '');
+    const otsDays = (onboardDate && offerDate && !isNaN(onboardDate.getTime()) && !isNaN(offerDate.getTime())) ? Math.floor((onboardDate.getTime() - offerDate.getTime()) / 86400000) : null;
+
+    if(dept === 'Sales' && ['Sourcing','Interviewing','Identified'].includes(status)) priority = 'Second Priority';
+
+    let hiringManager = String(row['Hiring Manager'] || '').trim();
+    if(status !== 'Onboard') {
+      for(const [oldMgr, ovrDept, ovrPos, newMgr] of HM_OVERRIDES) {
+        const matchDept = !ovrDept || dept === ovrDept;
+        const matchPos = !ovrPos || pos === ovrPos;
+        const matchMgr = !oldMgr || hiringManager === oldMgr;
+        if(matchDept && matchPos && matchMgr) { hiringManager = newMgr; break; }
+      }
+    }
+
+    const k2Link = row['K2 Progress'] || '';
+    const hasK2 = k2Link && String(k2Link).trim().length > 10;
+
+    const standardDays = row['object time'] ? Number(row['object time']) : null;
+    let daysVsTarget = null;
+    if(offerDate && hcReleasedDate && standardDays && !isNaN(offerDate.getTime()) && !isNaN(hcReleasedDate.getTime())) {
+      daysVsTarget = Math.floor(((offerDate.getTime() - hcReleasedDate.getTime()) / 86400000)) - standardDays;
+    }
+    let sla = daysBucket(daysVsTarget);
+    let slaSource = sla ? 'Calculated from dates' : null;
+    if(!sla && status === 'Onboard') {
+      sla = slaBucket(row['Recruitment Progress Type'] || '');
+      if(sla) slaSource = 'Tracker label';
+    }
+    if(status !== 'Onboard') { sla = null; slaSource = null; }
+
+    let openDays = null;
+    if(hcReleasedDate && sg === 'Open' && !isNaN(hcReleasedDate.getTime())) openDays = Math.floor((asOfDate.getTime() - hcReleasedDate.getTime()) / 86400000);
+    const pastTarget = sg === 'Open' && targetDate && targetDate < asOfDate;
+    const urgent = sg === 'Open' && priority === 'First Priority';
+
+    const offerMonth = offerDate && offerDate.getFullYear() === 2026 ? offerDate.getMonth() + 1 : null;
+    const onboardMonth = (status === 'Onboard' && onboardDate && onboardDate.getFullYear() === 2026) ? onboardDate.getMonth() + 1 : null;
+
+    return {
+      ...row,
+      'BU': row['BU'] || '', 'Company': row['Company'] || '', 'Department': dept, 'Position': pos,
+      'Hiring Manager': hiringManager, 'Status': status, 'Status Group': sg, 'Recruiter': recruiter,
+      'Worker Type': wt, 'Priority': priority, 'Job Grade': String(grade).replace(/\.0$/,'').trim(),
+      'Offer-to-Start Days': otsDays, 'K2 Submitted?': hasK2 ? 'Yes' : 'No',
+      'Days vs Target': daysVsTarget, 'SLA': sla, 'SLA Source': slaSource,
+      'Open Days': openDays, 'Past Target': pastTarget, 'Urgent': urgent,
+      'Channel': (row['Recruitment Channel'] || 'Not set').toString().trim().replace('Internal Refferral','Internal Referral').replace('leipin','Liepin') || 'Not set',
+      'Opening Type': (row['Opening Type'] || 'Not set').toString().trim() || 'Not set',
+      'Offer Month (2026)': offerMonth, 'Onboard Month': onboardMonth,
+      'Candidate (Identified only)': status === 'Identified' ? (row['Candidate Name'] || '') : null,
+      'CV sent': Number(row['this week']) || 0, 'Interview': Number(row['Interview']) || 0,
+      'Offer': Number(row['Number of offers']) || 0, 'Onboarding': Number(row['Number of new hires']) || 0,
+      'Comment': row['Comment'] || '',
+      '_onboardDate': onboardDate, '_offerDate': offerDate, '_hcReleasedDate': hcReleasedDate, '_targetDate': targetDate,
+    };
+  });
+}
+
+function parseWorkbook(wb) {
+  const sheetNames = wb.SheetNames || [];
+  console.log('Sheets:', sheetNames);
+
+  // As-of date: today
+  const asOfDate = new Date();
+
+  // Parse main data
+  let mainRows = [];
+  const SOURCE_SHEET = '02 Positions Tracking-2026';
+  if(sheetNames.includes(SOURCE_SHEET)) {
+    console.log('Using master tracker sheet:', SOURCE_SHEET);
+    mainRows = parseDataAllBU(wb.Sheets[SOURCE_SHEET]);
+  } else {
+    for(const name of sheetNames) {
+      if(name.toLowerCase().includes('positions tracking') || name.toLowerCase().includes('tracking')) {
+        mainRows = parseDataAllBU(wb.Sheets[name]); break;
+      }
+    }
+    if(mainRows.length === 0) {
+      for(const pattern of ['data_allbu','allbu','data','recruitment']) {
+        for(const name of sheetNames) {
+          if(name.toLowerCase().includes(pattern)) { mainRows = parseDataAllBU(wb.Sheets[name]); break; }
+        }
+        if(mainRows.length > 0) break;
+      }
+    }
+  }
+  console.log('Main rows parsed:', mainRows.length);
+
+  // Clean and filter
+  const cleaned = cleanMainData(mainRows, asOfDate).filter(r => r['Status'] !== 'On Hold');
+
+  // K2 data (PBU only)
+  const k2Data = cleaned.filter(r => r['BU'] === 'PBU');
+
+  // Weekly KPI (rows with activity)
+  const weeklyData = cleaned.filter(r => (r['CV sent'] + r['Interview'] + r['Offer'] + r['Onboarding']) > 0)
+    .map(r => ({BU:r['BU'],Department:r['Department'],Position:r['Position'],Status:r['Status'],Priority:r['Priority'],'Hiring Manager':r['Hiring Manager'],
+      'CV sent':r['CV sent'],Interview:r['Interview'],Offer:r['Offer'],Onboarding:r['Onboarding'],Comment:r['Comment']}));
+
+  rawData = {main: cleaned, k2: k2Data, weekly: weeklyData, asOf: asOfDate};
+  filteredData = {main: [...cleaned], k2: [...k2Data], weekly: [...weeklyData]};
+}
+
+// ==================== FILTERS ====================
+function populateFilters() {
+  const data = rawData.main;
+  const bus = [...new Set(data.map(r => r['BU']).filter(Boolean))].sort();
+  const depts = [...new Set(data.map(r => r['Department']).filter(Boolean))].sort();
+  const pris = [...new Set(data.map(r => r['Priority']).filter(Boolean))].sort((a,b) => PRIORITY_ORDER.indexOf(a) - PRIORITY_ORDER.indexOf(b));
+  const recs = [...new Set(data.map(r => r['Recruiter']).filter(Boolean))].sort();
+
+  fillSelect('filterBU', bus);
+  fillSelect('filterDept', depts);
+  fillSelect('filterPriority', pris, PRIORITY_ORDER);
+  fillSelect('filterRecruiter', recs);
+}
+
+function fillSelect(id, values, order) {
+  const sel = document.getElementById(id);
+  const current = sel.value;
+  sel.innerHTML = '<option value="">All</option>';
+  const sorted = order ? values.sort((a,b) => order.indexOf(a) - order.indexOf(b)) : values;
+  for(const v of sorted) {
+    const opt = document.createElement('option');
+    opt.value = v; opt.textContent = v;
+    sel.appendChild(opt);
+  }
+  sel.value = current;
+}
+
+function applyFilters() {
+  const bu = document.getElementById('filterBU').value;
+  const dept = document.getElementById('filterDept').value;
+  const wt = document.getElementById('filterWT').value;
+  const pri = document.getElementById('filterPriority').value;
+  const rec = document.getElementById('filterRecruiter').value;
+
+  // Update hero subtitle to reflect selected BU
+  const subtitle = document.getElementById('heroSubtitle');
+  if(bu) {
+    subtitle.textContent = 'Minth Asia Pacific · ' + bu;
+  } else {
+    const bus = [...new Set(rawData.main.map(r => r['BU']).filter(Boolean))].sort();
+    subtitle.textContent = 'Minth Asia Pacific · ' + bus.join(' · ');
+  }
+
+  filteredData.main = rawData.main.filter(r => {
+    if(bu && r['BU'] !== bu) return false;
+    if(dept && r['Department'] !== dept) return false;
+    if(wt && r['Worker Type'] !== wt) return false;
+    if(pri && r['Priority'] !== pri) return false;
+    if(rec && r['Recruiter'] !== rec) return false;
+    return true;
+  });
+  filteredData.k2 = filteredData.main.filter(r => r['BU'] === 'PBU');
+  filteredData.weekly = filteredData.main.filter(r => (r['CV sent'] + r['Interview'] + r['Offer'] + r['Onboarding']) > 0)
+    .map(r => ({BU:r['BU'],Department:r['Department'],Position:r['Position'],Status:r['Status'],Priority:r['Priority'],'Hiring Manager':r['Hiring Manager'],
+      'CV sent':r['CV sent'],Interview:r['Interview'],Offer:r['Offer'],Onboarding:r['Onboarding'],Comment:r['Comment']}));
+
+  renderAllTabs();
+}
+
+function resetFilters() {
+  ['filterBU','filterDept','filterWT','filterPriority','filterRecruiter'].forEach(id => document.getElementById(id).value = '');
+  applyFilters();
+}
+
+// ==================== RENDERING ====================
+function renderDashboard() {
+  document.getElementById('dashboard').classList.remove('hidden');
+  populateFilters();
+  // Set PBU as default BU filter
+  document.getElementById('filterBU').value = 'PBU';
+  applyFilters();
+  updateAsOf();
+}
+
+function updateAsOf() {
+  const d = rawData.asOf;
+  const txt = d ? d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) : '-';
+  document.getElementById('asofBadge').textContent = 'Live from master tracker · status as of ' + txt;
+}
+
+function renderMainKPIs() {
+  const data = filteredData.main;
+  const n = data.length;
+  const closed = data.filter(r => r['Status Group'] === 'Closed').length;
+  const onb = data.filter(r => r['Status Group'] === 'Onboarding').length;
+  const opn = data.filter(r => r['Status Group'] === 'Open').length;
+  const urg = data.filter(r => r['Urgent']).length;
+  const pct = n ? (closed / n * 100).toFixed(1) : '0.0';
+  const ident = data.filter(r => r['Status'] === 'Identified').length;
+
+  document.getElementById('mainKPIs').innerHTML =
+    kpiCard('Opened to date', n, 'positions', '#0d366b') +
+    kpiCard('Closed (Onboard)', closed, 'filled and started', C_CLOSED) +
+    kpiCard('Onboarding', onb, 'offer signed, not started', C_ONB) +
+    kpiCard('Open', opn, `incl. ${ident} identified`, C_OPEN) +
+    kpiCard('Urgent open', urg, 'First Priority', C_URGENT) +
+    kpiCard('% Closed', pct + '%', 'closed ÷ opened', '#6250d6');
+}
+
+function kpiCard(label, value, sub, accent) {
+  return `<div class="kpi" style="--accent:${accent}"><div class="label">${label}</div><div class="value">${value}</div><div class="sub">${sub}</div></div>`;
+}
+
+function switchTab(tabId) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelector(`.tab[data-tab="${tabId}"]`).classList.add('active');
+  document.getElementById('tab-' + tabId).classList.add('active');
+}
+
+function renderAllTabs() {
+  renderMainKPIs();
+  renderExecTab();
+  renderOverviewTab();
+  renderSLATab();
+  renderAgingTab();
+  renderChannelsTab();
+  renderOpenTab();
+  renderTrendTab();
+  renderRecruitersTab();
+  renderK2Tab();
+}
+
+// ==================== TAB: EXECUTIVE SUMMARY ====================
+function renderExecTab() {
+  const data = filteredData.main;
+  const n = data.length;
+  const closed = data.filter(r => r['Status Group'] === 'Closed').length;
+  const onb = data.filter(r => r['Status Group'] === 'Onboarding').length;
+  const opn = data.filter(r => r['Status Group'] === 'Open').length;
+  const urg = data.filter(r => r['Urgent']).length;
+  const pct = n ? (closed / n * 100) : 0;
+
+  const slaData = data.filter(r => r['SLA']);
+  const nSLA = slaData.length;
+  const onTime = slaData.filter(r => SLA_ORDER.slice(0,3).includes(r['SLA'])).length;
+  const late90 = slaData.filter(r => r['SLA'] === 'Late ≥90d').length;
+
+  const opData = data.filter(r => r['Status Group'] === 'Open');
+  const over90 = opData.filter(r => r['Open Days'] > 90).length;
+  const noReq = opData.filter(r => ageBucket(r['Open Days'], r['K2 Submitted?']) === 'No request in system (no K2)').length;
+  const pastTarget = opData.filter(r => r['Past Target']).length;
+
+  // Key points
+  const topUrg = {};
+  opData.filter(r => r['Urgent']).forEach(r => { topUrg[r['Department']] = (topUrg[r['Department']] || 0) + 1; });
+  const topUrgArr = Object.entries(topUrg).sort((a,b) => b[1] - a[1]).slice(0,3);
+  const topUrgTxt = topUrgArr.map(([k,v]) => `${k} (${v})`).join(', ') || 'none';
+
+  const hired = data.filter(r => r['Status'] === 'Onboard');
+  const chCounts = {};
+  hired.forEach(r => { const ch = r['Channel']; if(ch !== 'Not set') chCounts[ch] = (chCounts[ch] || 0) + 1; });
+  const topCh = Object.entries(chCounts).sort((a,b) => b[1] - a[1]).slice(0,2);
+  const chTxt = topCh.map(([k,v]) => `${k} (${v})`).join(' and ');
+
+  let html = `<div class="kpi-grid" style="grid-template-columns:repeat(5,minmax(0,1fr))">
+    ${kpiCard('% Closed', Math.round(pct) + '%', `${closed} of ${n} positions`, C_CLOSED)}
+    ${kpiCard('Hired on time', nSLA ? Math.round(onTime/nSLA*100) + '%' : '-', `${onTime} of ${nSLA} with SLA data`, '#1c5cab')}
+    ${kpiCard('Urgent open', urg, 'First Priority', C_URGENT)}
+    ${kpiCard('Open > 90 days', over90, 'positions with a request date', C_OPEN)}
+    ${kpiCard('Open, no request', noReq, 'needed but no K2 in system', '#a52a2a')}
+  </div>
+  <div class="card">
+    <h3>Key points</h3>
+    <div class="cap">Generated from the tracker</div>
+    <div class="key-points"><ul>
+      <li><strong>${closed} of ${n} positions filled (${pct.toFixed(0)}%)</strong>; ${onb} more have signed offers and are waiting to start; ${opn} are still open.</li>
+      <li><strong>${onTime} of ${nSLA} hires (${nSLA ? (onTime/nSLA*100).toFixed(0) : 0}%) were on time or early</strong> against the recruitment cycle target; ${late90} took 90+ days longer than target.</li>
+      <li><strong>${urg} urgent positions are open</strong>, most in ${topUrgTxt}.</li>
+      <li><strong>${noReq} open positions have no request (K2) in the system</strong>, so they have no official start date and cannot be tracked for speed.</li>
+      <li>Most hires came from ${chTxt || 'N/A'}.</li>
+    </ul></div>
+  </div>
+  <div class="card-row">
+    <div class="card"><h3>Hiring speed vs target</h3><div class="cap">Onboarded positions · offer date vs target</div><div id="execSLAChart"></div></div>
+    <div class="card"><h3>How long open positions have been open</h3><div class="cap">Days since HC Released Date</div><div id="execAgeChart"></div></div>
+  </div>`;
+
+  document.getElementById('tab-exec').innerHTML = html;
+  renderSLABar('execSLAChart', data);
+  renderAgeBar('execAgeChart', data);
+}
+
+// ==================== TAB: OVERVIEW ====================
+function renderOverviewTab() {
+  const data = filteredData.main;
+  let html = `<div class="card-row">
+    <div class="card"><h3>Positions by BU</h3><div class="cap">Closed · Onboarding · Open</div><div id="buChart"></div></div>
+    <div class="card"><h3>Positions by status</h3><div class="cap">Orange = open · green = offer signed · blue = onboard</div><div id="statusChart"></div></div>
+  </div>
+  <div class="card"><h3>Summary by department</h3><div class="cap">Sorted by open positions</div><div id="deptTable"></div></div>`;
+
+  document.getElementById('tab-overview').innerHTML = html;
+  renderBUChart();
+  renderStatusChart();
+  renderDeptTable();
+}
+
+function renderBUChart() {
+  const data = filteredData.main;
+  const bus = ['PBU','MBU','BBU'].filter(b => data.some(r => r['BU'] === b));
+  const groups = ['Closed','Onboarding','Open'];
+  const colors = [C_CLOSED, C_ONB, C_OPEN];
+
+  const traces = groups.map((g, i) => {
+    const vals = bus.map(bu => data.filter(r => r['BU'] === bu && r['Status Group'] === g).length);
+    return {y: bus, x: vals, name: g, type: 'bar', orientation: 'h', marker: {color: colors[i]},
+      hovertemplate: '<b>%{y}</b><br>' + g + ': %{x}<extra></extra>'};
+  });
+
+  const totals = bus.map(bu => data.filter(r => r['BU'] === bu).length);
+  const closedCounts = bus.map(bu => data.filter(r => r['BU'] === bu && r['Status Group'] === 'Closed').length);
+  const annotations = bus.map((bu, i) => ({
+    y: bu, x: totals[i], text: `  ${(closedCounts[i]/totals[i]*100).toFixed(0)}% closed`, showarrow: false,
+    xanchor: 'left', font: {color: INK2, size: 12}
+  }));
+
+  const layout = {barmode: 'stack', height: Math.max(300, 34 * bus.length + 60), margin: {l:160,r:140,t:10,b:30}, yaxis: {autorange: 'reversed', showgrid: false},
+    xaxis: {showgrid: true, gridcolor: GRID, range: [0, Math.max(...totals) * 1.3]},
+    annotations, showlegend: true, legend: {orientation: 'h', y: 1.12, x: 0},
+    paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)', font: {family: 'Inter', size: 12.5, color: INK2}};
+
+  Plotly.newPlot('buChart', traces, layout, {displayModeBar: false});
+}
+
+function renderStatusChart() {
+  const data = filteredData.main;
+  const counts = STATUS_ORDER.map(s => data.filter(r => r['Status'] === s).length);
+  const stageCol = {Sourcing: C_OPEN, Interviewing: C_OPEN, Identified: C_OPEN, 'Offer Signback': C_ONB, Onboard: C_CLOSED};
+  const colors = STATUS_ORDER.map(s => stageCol[s]);
+
+  const trace = {y: STATUS_ORDER, x: counts, type: 'bar', orientation: 'h', marker: {color: colors},
+    text: counts, textposition: 'outside', textfont: {color: INK2},
+    hovertemplate: '<b>%{y}</b>: %{x}<extra></extra>'};
+
+  const layout = {height: 300, margin: {l:160,r:60,t:10,b:40}, yaxis: {autorange: 'reversed', showgrid: false},
+    xaxis: {showgrid: true, gridcolor: GRID, range: [0, Math.max(...counts) * 1.15 || 1]},
+    showlegend: false, paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
+    font: {family: 'Inter', size: 12.5, color: INK2}};
+
+  Plotly.newPlot('statusChart', [trace], layout, {displayModeBar: false});
+}
+
+function renderDeptTable() {
+  const data = filteredData.main;
+  const depts = [...new Set(data.map(r => r['Department']))].sort();
+  const rows = depts.map(dept => {
+    const dd = data.filter(r => r['Department'] === dept);
+    const opened = dd.length;
+    const closed = dd.filter(r => r['Status Group'] === 'Closed').length;
+    const onboarding = dd.filter(r => r['Status Group'] === 'Onboarding').length;
+    const open = dd.filter(r => r['Status Group'] === 'Open').length;
+    const urgent = dd.filter(r => r['Urgent']).length;
+    const identified = dd.filter(r => r['Status'] === 'Identified').length;
+    const pctClosed = opened ? (closed / opened * 100).toFixed(0) : 0;
+    return {dept, opened, closed, onboarding, open, urgent, identified, pctClosed};
+  }).sort((a,b) => b.open - a.open || b.urgent - a.urgent);
+
+  let html = '<table><thead><tr><th>Department</th><th>Opened</th><th>Closed</th><th>Onboarding</th><th>Open</th><th>Urgent</th><th>Identified</th><th>% Closed</th></tr></thead><tbody>';
+  for(const r of rows) {
+    html += `<tr><td>${r.dept}</td><td>${r.opened}</td><td>${r.closed}</td><td>${r.onboarding}</td><td>${r.open}</td><td>${r.urgent}</td><td>${r.identified}</td>
+      <td><div style="display:flex;align-items:center;gap:8px"><div class="progress-bar"><div class="progress-fill" style="width:${r.pctClosed}%;background:${C_CLOSED}"></div></div>${r.pctClosed}%</div></td></tr>`;
+  }
+  html += '</tbody></table>';
+  document.getElementById('deptTable').innerHTML = html;
+}
+
+// ==================== TAB: SPEED & SLA ====================
+function renderSLATab() {
+  const data = filteredData.main;
+  const slaData = data.filter(r => r['SLA']);
+  const nSLA = slaData.length;
+  const nCalc = slaData.filter(r => r['SLA Source'] === 'Calculated from dates').length;
+  const closed = data.filter(r => r['Status Group'] === 'Closed').length;
+
+  let html = `<p style="font-size:12px;color:${MUTED};margin-bottom:12px">Onboarded positions with SLA data: ${nSLA} of ${closed}. Days vs target = (Offer Date − HC Released Date) − standard offer days for the grade. Calculated from dates for ${nCalc}; tracker's Recruitment Progress Type used for ${nSLA - nCalc} without dates.</p>
+  <div class="card"><h3>Result vs target</h3><div class="cap">Blue = early · grey = on time · red = late</div><div id="slaBarChart"></div></div>
+  <div class="card"><h3>Result vs target by Department</h3><div class="cap">Share of onboarded positions in each bucket · sorted by % on time</div><div id="slaDimTable"></div></div>
+  <div class="card"><h3>Hired 90+ days late</h3><div class="cap">Onboarded positions in the 'Late ≥90d' bucket</div><div id="lateTable"></div></div>`;
+
+  document.getElementById('tab-sla').innerHTML = html;
+  renderSLABar('slaBarChart', data);
+  renderSLADimTable();
+  renderLateTable();
+}
+
+function renderSLABar(containerId, data) {
+  const slaData = data.filter(r => r['SLA']);
+  const counts = {};
+  SLA_ORDER.forEach(s => counts[s] = 0);
+  slaData.forEach(r => { if(counts[r['SLA']] !== undefined) counts[r['SLA']]++; });
+  const filtered = SLA_ORDER.filter(s => counts[s] > 0 || s === 'On time');
+
+  const trace = {x: filtered, y: filtered.map(s => counts[s]), type: 'bar',
+    marker: {color: filtered.map(s => SLA_COLORS[s])},
+    text: filtered.map(s => counts[s]), textposition: 'outside', textfont: {color: INK2},
+    hovertemplate: '%{x}: %{y} positions<extra></extra>'};
+
+  const maxVal = Math.max(...filtered.map(s => counts[s]), 1);
+  const layout = {height: 300, margin: {l:8,r:8,t:10,b:40}, xaxis: {showgrid: false},
+    yaxis: {range: [0, maxVal * 1.2], showgrid: true, gridcolor: GRID},
+    showlegend: false, paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
+    font: {family: 'Inter', size: 12.5, color: INK2}, bargap: 0.35, barmode: 'group'};
+
+  Plotly.newPlot(containerId, [trace], layout, {displayModeBar: false});
+}
+
+function renderSLADimTable() {
+  const data = filteredData.main.filter(r => r['SLA']);
+  const depts = [...new Set(data.map(r => r['Department']))].sort();
+
+  const ct = depts.map(dept => {
+    const dd = data.filter(r => r['Department'] === dept);
+    const total = dd.length;
+    const buckets = {};
+    SLA_ORDER.forEach(s => buckets[s] = dd.filter(r => r['SLA'] === s).length);
+    const onTime = SLA_ORDER.slice(0,3).reduce((sum, s) => sum + buckets[s], 0);
+    return {dept, total, buckets, onTimePct: total ? onTime / total : 0};
+  }).sort((a,b) => a.onTimePct - b.onTimePct);
+
+  if(ct.length === 0) {
+    document.getElementById('slaDimTable').innerHTML = '<p style="color:#888">No SLA data available.</p>';
+    return;
+  }
+
+  let html = '<table><thead><tr><th>Department</th><th>Total</th>';
+  SLA_ORDER.forEach(s => html += `<th style="text-align:center;font-size:11px">${s}</th>`);
+  html += '<th style="text-align:center">% On Time</th></tr></thead><tbody>';
+
+  for(const r of ct) {
+    const pct = (r.onTimePct * 100).toFixed(0);
+    const barColor = r.onTimePct >= 0.7 ? C_CLOSED : (r.onTimePct >= 0.4 ? '#f0ad4e' : C_URGENT);
+    html += `<tr><td><strong>${r.dept}</strong></td><td style="text-align:center">${r.total}</td>`;
+    SLA_ORDER.forEach(s => {
+      const v = r.buckets[s];
+      const bg = v > 0 ? (SLA_COLORS[s] + '22') : '';
+      html += `<td style="text-align:center;background:${bg}">${v > 0 ? v : '-'}</td>`;
+    });
+    html += `<td><div style="display:flex;align-items:center;gap:8px;justify-content:center"><div class="progress-bar" style="flex:1;max-width:100px"><div class="progress-fill" style="width:${pct}%;background:${barColor}"></div></div><span style="font-weight:600;font-size:12px">${pct}%</span></div></td></tr>`;
+  }
+  html += '</tbody></table>';
+  document.getElementById('slaDimTable').innerHTML = html;
+}
+
+function renderLateTable() {
+  const late = filteredData.main.filter(r => r['SLA'] === 'Late ≥90d');
+  if(late.length === 0) { document.getElementById('lateTable').innerHTML = '<p style="color:#888">No positions hired 90+ days late.</p>'; return; }
+
+  let html = '<div class="table-scroll"><table><thead><tr><th>BU</th><th>Department</th><th>Position</th><th>Job Grade</th><th>Hiring Manager</th><th>Recruiter</th><th>HC Released</th><th>Offer Date</th><th>Days vs Target</th><th>SLA Source</th></tr></thead><tbody>';
+  for(const r of late) {
+    const hcDate = r['_hcReleasedDate'] ? r['_hcReleasedDate'].toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) : '-';
+    const offDate = r['_offerDate'] ? r['_offerDate'].toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) : '-';
+    html += `<tr><td>${r['BU']}</td><td>${r['Department']}</td><td>${r['Position']}</td><td>${r['Job Grade']}</td><td>${r['Hiring Manager']}</td><td>${r['Recruiter']}</td><td>${hcDate}</td><td>${offDate}</td><td>${r['Days vs Target'] || '-'}</td><td>${r['SLA Source'] || '-'}</td></tr>`;
+  }
+  html += '</tbody></table></div>';
+  document.getElementById('lateTable').innerHTML = html;
+}
+
+// ==================== TAB: AGING ====================
+function renderAgingTab() {
+  const data = filteredData.main;
+  const opData = data.filter(r => r['Status Group'] === 'Open');
+  const pastTarget = opData.filter(r => r['Past Target']).length;
+
+  let html = `<p style="font-size:12px;color:${MUTED};margin-bottom:12px">Open positions only. Positions without an HC Released Date are split by whether a K2 request exists.</p>
+  <div class="card-row">
+    <div class="card"><h3>Open positions by age</h3><div class="cap">${opData.length} open positions</div><div id="ageBarChart"></div></div>
+    <div class="card"><h3>Age by department</h3><div class="cap">Number of open positions</div><div id="ageDeptChart"></div></div>
+  </div>
+  <div class="card"><h3>Open positions, oldest first</h3><div class="cap">${pastTarget} are already past their target date</div><div id="agingTable"></div></div>`;
+
+  document.getElementById('tab-aging').innerHTML = html;
+  renderAgeBar('ageBarChart', data);
+  renderAgeDeptChart();
+  renderAgingTable();
+}
+
+function renderAgeBar(containerId, data) {
+  const opData = data.filter(r => r['Status Group'] === 'Open');
+  const counts = {};
+  AGE_ORDER.forEach(a => counts[a] = 0);
+  opData.forEach(r => {
+    const bucket = ageBucket(r['Open Days'], r['K2 Submitted?']);
+    if(counts[bucket] !== undefined) counts[bucket]++;
+  });
+
+  const trace = {y: AGE_ORDER, x: AGE_ORDER.map(a => counts[a]), type: 'bar', orientation: 'h',
+    marker: {color: AGE_COLORS}, text: AGE_ORDER.map(a => counts[a]), textposition: 'outside', textfont: {color: INK2},
+    hovertemplate: '%{y}: %{x} open positions<extra></extra>'};
+
+  const maxVal = Math.max(...AGE_ORDER.map(a => counts[a]), 1);
+  const layout = {height: 330, margin: {l:180,r:60,t:10,b:40}, yaxis: {autorange: 'reversed', showgrid: false},
+    xaxis: {showgrid: true, gridcolor: GRID, range: [0, maxVal * 1.2]},
+    showlegend: false, paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
+    font: {family: 'Inter', size: 12.5, color: INK2}, bargap: 0.35};
+
+  Plotly.newPlot(containerId, [trace], layout, {displayModeBar: false});
+}
+
+function renderAgeDeptChart() {
+  const opData = filteredData.main.filter(r => r['Status Group'] === 'Open');
+  const depts = [...new Set(opData.map(r => r['Department']))].sort();
+
+  const ct = depts.map(dept => {
+    const dd = opData.filter(r => r['Department'] === dept);
+    const buckets = {};
+    AGE_ORDER.forEach(a => buckets[a] = 0);
+    dd.forEach(r => { const b = ageBucket(r['Open Days'], r['K2 Submitted?']); if(buckets[b] !== undefined) buckets[b]++; });
+    return {dept, buckets, total: dd.length};
+  }).sort((a,b) => a.total - b.total);
+
+  const traces = AGE_ORDER.map((age, i) => ({
+    y: ct.map(r => r.dept), x: ct.map(r => r.buckets[age]), name: age, type: 'bar', orientation: 'h',
+    marker: {color: AGE_COLORS[i]}, hovertemplate: '<b>%{y}</b><br>' + age + ': %{x}<extra></extra>'
+  }));
+
+  const layout = {barmode: 'stack', height: Math.max(330, 28 * ct.length + 90),
+    margin: {l:160,r:8,t:10,b:40}, yaxis: {showgrid: false}, xaxis: {showgrid: true, gridcolor: GRID},
+    showlegend: true, legend: {orientation: 'h', y: 1.08, x: 0},
+    paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
+    font: {family: 'Inter', size: 12.5, color: INK2}};
+
+  Plotly.newPlot('ageDeptChart', traces, layout, {displayModeBar: false});
+}
+
+function renderAgingTable() {
+  const opData = filteredData.main.filter(r => r['Status Group'] === 'Open')
+    .sort((a,b) => (b['Open Days'] || 0) - (a['Open Days'] || 0));
+
+  let html = '<div class="table-scroll" style="max-height:460px"><table><thead><tr><th>Aging</th><th>Open Days</th><th>Priority</th><th>BU</th><th>Department</th><th>Position</th><th>Status</th><th>HC Released</th><th>Target Date</th><th>K2?</th><th>Hiring Manager</th><th>Recruiter</th></tr></thead><tbody>';
+  for(const r of opData) {
+    const aging = ageBucket(r['Open Days'], r['K2 Submitted?']);
+    const hcDate = r['_hcReleasedDate'] ? r['_hcReleasedDate'].toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) : '-';
+    const tgtDate = r['_targetDate'] ? r['_targetDate'].toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) : '-';
+    html += `<tr><td>${aging}</td><td>${r['Open Days'] ?? '-'}</td><td>${r['Priority']}</td><td>${r['BU']}</td><td>${r['Department']}</td><td>${r['Position']}</td><td>${r['Status']}</td><td>${hcDate}</td><td>${tgtDate}</td><td>${r['K2 Submitted?']}</td><td>${r['Hiring Manager']}</td><td>${r['Recruiter']}</td></tr>`;
+  }
+  html += '</tbody></table></div>';
+  document.getElementById('agingTable').innerHTML = html;
+}
+
+// ==================== TAB: CHANNELS & DEMAND ====================
+function renderChannelsTab() {
+  const data = filteredData.main;
+  const hired = data.filter(r => r['Status'] === 'Onboard');
+
+  let html = `<div class="card-row">
+    <div class="card"><h3>Where hires came from</h3><div class="cap">Onboarded positions by Recruitment Channel · n=${hired.length}</div><div id="channelChart"></div></div>
+    <div class="card"><h3>Why we are hiring</h3><div class="cap">Opening Type · all positions</div><div id="openingTypeChart"></div></div>
+  </div>
+  <div class="card-row">
+    <div class="card"><h3>Channel by worker type</h3><div class="cap">Onboarded positions</div><div id="channelWTTable"></div></div>
+    <div class="card"><h3>Replacement hiring by department</h3><div class="cap">Positions opened to replace leavers</div><div id="replacementTable"></div></div>
+  </div>`;
+
+  document.getElementById('tab-channels').innerHTML = html;
+  renderChannelChart(hired);
+  renderOpeningTypeChart(data);
+  renderChannelWTTable(hired);
+  renderReplacementTable(data);
+}
+
+function renderChannelChart(hired) {
+  const counts = {};
+  hired.forEach(r => { const ch = r['Channel']; counts[ch] = (counts[ch] || 0) + 1; });
+  let entries = Object.entries(counts).sort((a,b) => b[1] - a[1]);
+  if(entries.length > 7) {
+    const top7 = entries.slice(0, 7);
+    const otherSum = entries.slice(7).reduce((s, [,v]) => s + v, 0);
+    entries = [...top7, ['Other channels', otherSum]];
+  }
+  entries = entries.sort((a,b) => a[1] - b[1]);
+
+  const trace = {y: entries.map(e => e[0]), x: entries.map(e => e[1]), type: 'bar', orientation: 'h',
+    marker: {color: C_CLOSED}, text: entries.map(e => `${e[1]}  (${(e[1]/hired.length*100).toFixed(0)}%)`),
+    textposition: 'outside', textfont: {color: INK2},
+    hovertemplate: '%{y}: %{x} hires<extra></extra>'};
+
+  const maxVal = Math.max(...entries.map(e => e[1]), 1);
+  const layout = {height: 330, margin: {l:180,r:100,t:10,b:40}, yaxis: {showgrid: false},
+    xaxis: {showgrid: true, gridcolor: GRID, range: [0, maxVal * 1.3]},
+    showlegend: false, paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
+    font: {family: 'Inter', size: 12.5, color: INK2}, bargap: 0.35};
+
+  Plotly.newPlot('channelChart', [trace], layout, {displayModeBar: false});
+}
+
+function renderOpeningTypeChart(data) {
+  const otOrder = ['New in Budget','Replacement','New out of Budget','Not set'];
+  const types = otOrder.filter(t => data.some(r => r['Opening Type'] === t));
+
+  const groups = ['Closed','Onboarding','Open'];
+  const colors = [C_CLOSED, C_ONB, C_OPEN];
+
+  const ct = types.map(t => {
+    const dd = data.filter(r => r['Opening Type'] === t);
+    const row = {type: t, total: dd.length};
+    groups.forEach(g => row[g] = dd.filter(r => r['Status Group'] === g).length);
+    return row;
+  });
+
+  const traces = groups.map((g, i) => ({
+    y: ct.map(r => r.type), x: ct.map(r => r[g]), name: g, type: 'bar', orientation: 'h',
+    marker: {color: colors[i]}, hovertemplate: '<b>%{y}</b><br>' + g + ': %{x}<extra></extra>'
+  }));
+
+  const totals = ct.map(r => r.total);
+  const annotations = ct.map((r, i) => ({
+    y: r.type, x: r.total, text: `  ${r.total} (${(r.total / data.length * 100).toFixed(0)}%)`,
+    showarrow: false, xanchor: 'left', font: {color: INK2, size: 12}
+  }));
+
+  const maxVal = Math.max(...totals, 1);
+  const layout = {barmode: 'stack', height: 330, margin: {l:180,r:100,t:10,b:40},
+    yaxis: {autorange: 'reversed', showgrid: false}, xaxis: {showgrid: true, gridcolor: GRID, range: [0, maxVal * 1.3]},
+    annotations, showlegend: true, legend: {orientation: 'h', y: 1.08, x: 0},
+    paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
+    font: {family: 'Inter', size: 12.5, color: INK2}};
+
+  Plotly.newPlot('openingTypeChart', traces, layout, {displayModeBar: false});
+}
+
+function renderChannelWTTable(hired) {
+  const channels = [...new Set(hired.map(r => r['Channel']))].sort();
+  const wts = ['WCW','BCW'];
+  let html = '<table><thead><tr><th>Channel</th>';
+  wts.forEach(wt => html += `<th>${wt}</th>`);
+  html += '<th>Total</th></tr></thead><tbody>';
+  const rows = channels.map(ch => {
+    const dd = hired.filter(r => r['Channel'] === ch);
+    const row = {ch, total: dd.length};
+    wts.forEach(wt => row[wt] = dd.filter(r => r['Worker Type'] === wt).length);
+    return row;
+  }).sort((a,b) => b.total - a.total);
+  for(const r of rows) {
+    html += `<tr><td>${r.ch}</td>`;
+    wts.forEach(wt => html += `<td>${r[wt]}</td>`);
+    html += `<td><strong>${r.total}</strong></td></tr>`;
+  }
+  html += '</tbody></table>';
+  document.getElementById('channelWTTable').innerHTML = html;
+}
+
+function renderReplacementTable(data) {
+  const depts = [...new Set(data.map(r => r['Department']))].sort();
+  const rows = depts.map(dept => {
+    const dd = data.filter(r => r['Department'] === dept);
+    const repl = dd.filter(r => r['Opening Type'] === 'Replacement').length;
+    const total = dd.length;
+    const pct = total ? (repl / total * 100).toFixed(0) : 0;
+    return {dept, repl, total, pct};
+  }).filter(r => r.repl > 0).sort((a,b) => b.repl - a.repl);
+
+  let html = '<table><thead><tr><th>Department</th><th>Replacement</th><th>All positions</th><th>% Replacement</th></tr></thead><tbody>';
+  for(const r of rows) {
+    html += `<tr><td>${r.dept}</td><td>${r.repl}</td><td>${r.total}</td>
+      <td><div style="display:flex;align-items:center;gap:8px"><div class="progress-bar" style="flex:1"><div class="progress-fill" style="width:${r.pct}%;background:${C_OPEN}"></div></div>${r.pct}%</div></td></tr>`;
+  }
+  html += '</tbody></table>';
+  document.getElementById('replacementTable').innerHTML = html;
+}
+
+// ==================== TAB: OPEN POSITIONS ====================
+function renderOpenTab() {
+  const data = filteredData.main;
+  const opData = data.filter(r => r['Status Group'] === 'Open');
+  const onbData = data.filter(r => r['Status Group'] === 'Onboarding').sort((a,b) => (a['_onboardDate'] || 0) - (b['_onboardDate'] || 0));
+  const idData = data.filter(r => r['Status'] === 'Identified');
+
+  let html = `<div class="card-row">
+    <div class="card"><h3>Open positions: department × priority</h3><div class="cap">Darker = more open positions</div><div id="heatmapChart"></div></div>
+    <div>
+      <div class="card"><h3>Upcoming starts</h3><div class="cap">Offer signed · sorted by expected start date</div><div id="upcomingTable"></div></div>
+      <div class="card"><h3>Identified</h3><div class="cap">Candidate negotiating offer</div><div id="identifiedTable"></div></div>
+    </div>
+  </div>
+  <div class="card"><h3>All open positions</h3><div class="cap">Urgent (First Priority) first</div><div id="openTable"></div></div>`;
+
+  document.getElementById('tab-open').innerHTML = html;
+  renderHeatmap();
+  renderUpcomingTable(onbData);
+  renderIdentifiedTable(idData);
+  renderOpenTable(opData);
+}
+
+function renderHeatmap() {
+  const opData = filteredData.main.filter(r => r['Status Group'] === 'Open');
+  const depts = [...new Set(opData.map(r => r['Department']))].sort();
+  const pris = PRIORITY_ORDER.filter(p => opData.some(r => r['Priority'] === p));
+
+  const z = depts.map(dept => pris.map(pri => opData.filter(r => r['Department'] === dept && r['Priority'] === pri).length));
+
+  const trace = {z, x: pris.map(p => p.replace(' Priority','')), y: depts, type: 'heatmap',
+    colorscale: [[0,'#f3f7fd'],[0.25,'#b7d3f6'],[0.5,'#6da7ec'],[0.75,'#2a78d6'],[1,'#104281']],
+    xgap: 2, ygap: 2, text: z, texttemplate: '%{text}', showscale: false,
+    hovertemplate: '<b>%{y}</b><br>%{x} priority: %{z}<extra></extra>'};
+
+  const layout = {height: Math.max(320, 36 * depts.length + 80), margin: {l:180,r:30,t:40,b:40},
+    xaxis: {side: 'top', title: 'Priority', titlefont: {size: 13}}, yaxis: {autorange: 'reversed', title: 'Department', titlefont: {size: 13}},
+    showlegend: false, paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
+    font: {family: 'Inter', size: 12.5, color: INK2}};
+
+  Plotly.newPlot('heatmapChart', [trace], layout, {displayModeBar: false});
+}
+
+function renderUpcomingTable(data) {
+  if(data.length === 0) { document.getElementById('upcomingTable').innerHTML = '<p style="color:#888">No upcoming starts.</p>'; return; }
+  let html = '<table><thead><tr><th>Expected start</th><th>BU</th><th>Department</th><th>Position</th><th>Hiring Manager</th><th>Recruiter</th></tr></thead><tbody>';
+  for(const r of data) {
+    const date = r['_onboardDate'] ? r['_onboardDate'].toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) : '-';
+    html += `<tr><td>${date}</td><td>${r['BU']}</td><td>${r['Department']}</td><td>${r['Position']}</td><td>${r['Hiring Manager']}</td><td>${r['Recruiter']}</td></tr>`;
+  }
+  html += '</tbody></table>';
+  document.getElementById('upcomingTable').innerHTML = html;
+}
+
+function renderIdentifiedTable(data) {
+  if(data.length === 0) { document.getElementById('identifiedTable').innerHTML = '<p style="color:#888">No identified candidates.</p>'; return; }
+  let html = '<table><thead><tr><th>BU</th><th>Department</th><th>Position</th><th>Candidate</th><th>Priority</th><th>Hiring Manager</th></tr></thead><tbody>';
+  for(const r of data) {
+    html += `<tr><td>${r['BU']}</td><td>${r['Department']}</td><td>${r['Position']}</td><td>${r['Candidate (Identified only)'] || '-'}</td><td>${r['Priority']}</td><td>${r['Hiring Manager']}</td></tr>`;
+  }
+  html += '</tbody></table>';
+  document.getElementById('identifiedTable').innerHTML = html;
+}
+
+function renderOpenTable(data) {
+  const priIcon = {'First Priority':'🔴 First','Second Priority':'🟠 Second','Third Priority':'🟡 Third','Fourth Priority':'⚪ Fourth'};
+  const sorted = [...data].sort((a,b) => PRIORITY_ORDER.indexOf(a['Priority']) - PRIORITY_ORDER.indexOf(b['Priority']) || a['BU'].localeCompare(b['BU']));
+
+  let html = '<div class="table-scroll" style="max-height:460px"><table><thead><tr><th>Priority</th><th>BU</th><th>Department</th><th>Position</th><th>Status</th><th>Job Grade</th><th>Worker Type</th><th>Hiring Manager</th><th>Recruiter</th></tr></thead><tbody>';
+  for(const r of sorted) {
+    html += `<tr><td>${priIcon[r['Priority']] || r['Priority']}</td><td>${r['BU']}</td><td>${r['Department']}</td><td>${r['Position']}</td><td>${r['Status']}</td><td>${r['Job Grade']}</td><td>${r['Worker Type']}</td><td>${r['Hiring Manager']}</td><td>${r['Recruiter']}</td></tr>`;
+  }
+  html += '</tbody></table></div>';
+  document.getElementById('openTable').innerHTML = html;
+}
+
+// ==================== TAB: TREND ====================
+function renderTrendTab() {
+  const data = filteredData.main;
+  const onboard = data.filter(r => r['Status'] === 'Onboard');
+  const allMonths = [...new Set([...data.map(r => r['Offer Month (2026)']).filter(Boolean), ...onboard.map(r => r['Onboard Month']).filter(Boolean)])];
+  const lastM = allMonths.length ? Math.max(...allMonths) : 1;
+  const months = Array.from({length: lastM}, (_, i) => i + 1);
+  const xl = months.map(m => MONTHS[m - 1]);
+
+  const offerCounts = months.map(m => data.filter(r => r['Offer Month (2026)'] === m).length);
+  const onboardCounts = months.map(m => onboard.filter(r => r['Onboard Month'] === m).length);
+  const offerCum = offerCounts.reduce((acc, v) => { acc.push((acc.length ? acc[acc.length - 1] : 0) + v); return acc; }, []);
+  const onboardCum = onboardCounts.reduce((acc, v) => { acc.push((acc.length ? acc[acc.length - 1] : 0) + v); return acc; }, []);
+
+  const otsData = data.map(r => r['Offer-to-Start Days']).filter(v => v !== null && v !== undefined && !isNaN(v) && isFinite(v));
+  const median = otsData.length ? otsData.sort((a,b) => a - b)[Math.floor(otsData.length / 2)] : null;
+  const avg = otsData.length ? (otsData.reduce((s,v) => s + v, 0) / otsData.length) : null;
+  const maxOts = otsData.length ? Math.max(...otsData) : null;
+
+  const bins = [0,7,14,21,30,45,60,10000];
+  const labels = ['≤7','8–14','15–21','22–30','31–45','46–60','>60'];
+  const histCounts = labels.map((_, i) => otsData.filter(v => v >= bins[i] && v < bins[i + 1]).length);
+
+  let html = `<div class="card-row">
+    <div class="card"><h3>Offers vs Onboard per month</h3><div class="cap">2026 · by offer date and onboard date · last month = month to date</div><div id="trendMonthlyChart"></div></div>
+    <div class="card"><h3>Cumulative</h3><div class="cap">Running total since January</div><div id="trendCumulativeChart"></div></div>
+  </div>
+  <div class="card"><h3>Offer → start date</h3><div class="cap">Days between offer date and start date · ${otsData.length} records</div>
+    <div class="metrics-row"><div class="metric-box"><div class="metric-label">Median</div><div class="metric-value">${median !== null ? median + ' days' : '-'}</div></div>
+    <div class="metric-box"><div class="metric-label">Average</div><div class="metric-value">${avg !== null ? avg.toFixed(1) + ' days' : '-'}</div></div>
+    <div class="metric-box"><div class="metric-label">Longest</div><div class="metric-value">${maxOts !== null ? maxOts + ' days' : '-'}</div></div></div>
+    <div id="trendHistogram"></div>
+  </div>`;
+
+  document.getElementById('tab-trend').innerHTML = html;
+
+  // Monthly chart
+  const traceOffer = {x: xl, y: offerCounts, name: 'Offers', mode: 'lines+markers', line: {color: C_OPEN, width: 2}, marker: {size: 8, line: {color: '#fff', width: 2}}};
+  const traceOnboard = {x: xl, y: onboardCounts, name: 'Onboard', mode: 'lines+markers', line: {color: C_CLOSED, width: 2}, marker: {size: 8, line: {color: '#fff', width: 2}}};
+  const monthlyLayout = {height: 330, margin: {l:8,r:8,t:10,b:40}, hovermode: 'x unified', showlegend: true, legend: {orientation: 'h', y: 1.08, x: 0},
+    xaxis: {showgrid: false}, yaxis: {showgrid: true, gridcolor: GRID},
+    paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)', font: {family: 'Inter', size: 12.5, color: INK2}};
+  Plotly.newPlot('trendMonthlyChart', [traceOffer, traceOnboard], monthlyLayout, {displayModeBar: false});
+
+  // Cumulative chart
+  const traceOfferCum = {x: xl, y: offerCum, name: 'Offers (cum.)', mode: 'lines', line: {color: C_OPEN, width: 2}};
+  const traceOnboardCum = {x: xl, y: onboardCum, name: 'Onboard (cum.)', mode: 'lines', line: {color: C_CLOSED, width: 2}};
+  Plotly.newPlot('trendCumulativeChart', [traceOfferCum, traceOnboardCum], {...monthlyLayout}, {displayModeBar: false});
+
+  // Histogram
+  const traceHist = {x: labels, y: histCounts, type: 'bar', marker: {color: C_CLOSED}, text: histCounts, textposition: 'outside', textfont: {color: INK2},
+    hovertemplate: '%{x} days: %{y}<extra></extra>'};
+  const histLayout = {height: 280, margin: {l:8,r:8,t:10,b:40}, xaxis: {title: 'days', showgrid: false}, yaxis: {showgrid: true, gridcolor: GRID},
+    showlegend: false, paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)', font: {family: 'Inter', size: 12.5, color: INK2}, bargap: 0.35};
+  Plotly.newPlot('trendHistogram', [traceHist], histLayout, {displayModeBar: false});
+}
+
+// ==================== TAB: RECRUITERS ====================
+function renderRecruitersTab() {
+  const data = filteredData.main;
+  const recruiters = [...new Set(data.map(r => r['Recruiter']))].sort();
+  const rows = recruiters.map(rec => {
+    const dd = data.filter(r => r['Recruiter'] === rec);
+    return {rec, owned: dd.length, closed: dd.filter(r => r['Status Group'] === 'Closed').length,
+      onboarding: dd.filter(r => r['Status Group'] === 'Onboarding').length,
+      open: dd.filter(r => r['Status Group'] === 'Open').length,
+      urgent: dd.filter(r => r['Urgent']).length};
+  }).sort((a,b) => a.owned - b.owned);
+
+  const wk = filteredData.weekly;
+  const totCV = wk.reduce((s, r) => s + (r['CV sent'] || 0), 0);
+  const totInt = wk.reduce((s, r) => s + (r['Interview'] || 0), 0);
+  const totOff = wk.reduce((s, r) => s + (r['Offer'] || 0), 0);
+  const totOnb = wk.reduce((s, r) => s + (r['Onboarding'] || 0), 0);
+
+  let html = `<div class="card"><h3>Recruiter workload & results</h3><div class="cap">Positions owned in the current filter</div><div id="recruiterChart"></div><div id="recruiterTable"></div></div>
+  <div class="card"><h3>Weekly activity</h3><div class="cap">Tracker columns: Recommend CV this week · Interview · Number of offers · Number of new hires</div>
+    <div class="metrics-row"><div class="metric-box"><div class="metric-label">CV sent</div><div class="metric-value">${totCV}</div></div>
+    <div class="metric-box"><div class="metric-label">Interview</div><div class="metric-value">${totInt}</div></div>
+    <div class="metric-box"><div class="metric-label">Offer</div><div class="metric-value">${totOff}</div></div>
+    <div class="metric-box"><div class="metric-label">Onboarding</div><div class="metric-value">${totOnb}</div></div></div>
+    <div id="weeklyTable"></div>
+  </div>`;
+
+  document.getElementById('tab-recruiters').innerHTML = html;
+
+  // Chart
+  const groups = ['Closed','Onboarding','Open'];
+  const colors = [C_CLOSED, C_ONB, C_OPEN];
+  const traces = groups.map((g, i) => ({
+    y: rows.map(r => r.rec), x: rows.map(r => r[g.toLowerCase()]), name: g, type: 'bar', orientation: 'h',
+    marker: {color: colors[i]}, hovertemplate: '<b>%{y}</b><br>' + g + ': %{x}<extra></extra>'
+  }));
+  const chartLayout = {barmode: 'stack', height: Math.max(300, 34 * rows.length + 60),
+    margin: {l:120,r:8,t:10,b:40}, yaxis: {showgrid: false}, xaxis: {showgrid: true, gridcolor: GRID},
+    showlegend: true, legend: {orientation: 'h', y: 1.05, x: 0},
+    paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)', font: {family: 'Inter', size: 12.5, color: INK2}};
+  Plotly.newPlot('recruiterChart', traces, chartLayout, {displayModeBar: false});
+
+  // Table
+  const sortedRows = [...rows].sort((a,b) => b.owned - a.owned);
+  let tableHtml = '<table><thead><tr><th>Recruiter</th><th>Owned</th><th>Closed</th><th>Onboarding</th><th>Open</th><th>Urgent</th><th>% Closed</th></tr></thead><tbody>';
+  for(const r of sortedRows) {
+    const pct = r.owned ? (r.closed / r.owned * 100).toFixed(0) : 0;
+    tableHtml += `<tr><td>${r.rec}</td><td>${r.owned}</td><td>${r.closed}</td><td>${r.onboarding}</td><td>${r.open}</td><td>${r.urgent}</td>
+      <td><div style="display:flex;align-items:center;gap:8px"><div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${C_CLOSED}"></div></div>${pct}%</div></td></tr>`;
+  }
+  tableHtml += '</tbody></table>';
+  document.getElementById('recruiterTable').innerHTML = tableHtml;
+
+  // Weekly table
+  if(wk.length > 0) {
+    const byHM = {};
+    wk.forEach(r => {
+      const key = `${r['BU']}|${r['Department']}|${r['Hiring Manager']}`;
+      if(!byHM[key]) byHM[key] = {bu: r['BU'], dept: r['Department'], hm: r['Hiring Manager'], cv: 0, int: 0, off: 0, onb: 0};
+      byHM[key].cv += r['CV sent'] || 0; byHM[key].int += r['Interview'] || 0;
+      byHM[key].off += r['Offer'] || 0; byHM[key].onb += r['Onboarding'] || 0;
+    });
+    const hmRows = Object.values(byHM).sort((a,b) => b.cv - a.cv);
+    let wkHtml = '<table><thead><tr><th>BU</th><th>Department</th><th>Hiring Manager</th><th>CV sent</th><th>Interview</th><th>Offer</th><th>Onboarding</th></tr></thead><tbody>';
+    for(const r of hmRows) wkHtml += `<tr><td>${r.bu}</td><td>${r.dept}</td><td>${r.hm}</td><td>${r.cv}</td><td>${r.int}</td><td>${r.off}</td><td>${r.onb}</td></tr>`;
+    wkHtml += '</tbody></table>';
+    document.getElementById('weeklyTable').innerHTML = wkHtml;
+  } else {
+    document.getElementById('weeklyTable').innerHTML = '<p style="color:#888">No weekly KPI rows for this filter.</p>';
+  }
+}
+
+// ==================== TAB: K2 COMPLIANCE ====================
+function renderK2Tab() {
+  const k2 = filteredData.k2;
+  const noK2 = k2.filter(r => r['K2 Submitted?'] === 'No');
+  const buckets = {'Still sourcing': 0, 'In process': 0, 'Already onboard': 0};
+  noK2.forEach(r => {
+    const s = r['Status'];
+    if(s === 'Sourcing') buckets['Still sourcing']++;
+    else if(s === 'Onboard') buckets['Already onboard']++;
+    else buckets['In process']++;
+  });
+
+  let html = `<p style="font-size:12px;color:${MUTED};margin-bottom:12px">PBU only · K2 = column E (K2 Progress) has a link · On Hold excluded</p>
+  <div class="kpi-grid" style="grid-template-columns:repeat(4,minmax(0,1fr))">
+    ${kpiCard('No K2 in system', noK2.length, 'positions', C_URGENT)}
+    ${kpiCard('Still sourcing', buckets['Still sourcing'], 'K2 needed to proceed', C_OPEN)}
+    ${kpiCard('In process', buckets['In process'], 'interviewing / identified / signed', C_ONB)}
+    ${kpiCard('Already onboard', buckets['Already onboard'], 'started without K2', C_CLOSED)}
+  </div>
+  <div class="card-row">
+    <div class="card"><h3>% positions without K2</h3><div class="cap">by department</div><div id="k2DeptChart"></div></div>
+    <div class="card"><h3>Hiring managers to follow up</h3><div class="cap">Positions with no K2 submission</div><div id="k2Table"></div></div>
+  </div>`;
+
+  document.getElementById('tab-k2').innerHTML = html;
+
+  // Dept chart
+  const depts = [...new Set(k2.map(r => r['Department']))].sort();
+  const kd = depts.map(dept => {
+    const dd = k2.filter(r => r['Department'] === dept);
+    const no = dd.filter(r => r['K2 Submitted?'] === 'No').length;
+    return {dept, total: dd.length, no, pct: dd.length ? no / dd.length : 0};
+  }).filter(r => r.no > 0).sort((a,b) => a.pct - b.pct);
+
+  if(kd.length > 0) {
+    const trace = {y: kd.map(r => r.dept), x: kd.map(r => r.pct), type: 'bar', orientation: 'h',
+      marker: {color: C_URGENT}, text: kd.map(r => `${(r.pct * 100).toFixed(0)}%  (${r.no}/${r.total})`),
+      textposition: 'outside', textfont: {color: INK2},
+      hovertemplate: '<b>%{y}</b><br>%{x:.0%} without K2<extra></extra>'};
+    const maxPct = Math.max(...kd.map(r => r.pct), 0.1);
+    const layout = {height: Math.max(300, 34 * kd.length + 60), margin: {l:180,r:100,t:10,b:40},
+      xaxis: {tickformat: '.0%', range: [0, maxPct * 1.6], showgrid: true, gridcolor: GRID},
+      yaxis: {showgrid: false}, showlegend: false,
+      paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)', font: {family: 'Inter', size: 12.5, color: INK2}, bargap: 0.35};
+    Plotly.newPlot('k2DeptChart', [trace], layout, {displayModeBar: false});
+  } else {
+    document.getElementById('k2DeptChart').innerHTML = '<p style="color:#888">All positions have K2 submitted.</p>';
+  }
+
+  // Table
+  if(noK2.length > 0) {
+    const sorted = [...noK2].sort((a,b) => a['Hiring Manager'].localeCompare(b['Hiring Manager']) || a['Department'].localeCompare(b['Department']));
+    let tableHtml = '<div class="table-scroll" style="max-height:420px"><table><thead><tr><th>Department</th><th>Position</th><th>Priority</th><th>Status</th><th>Hiring Manager</th><th>Recruiter</th></tr></thead><tbody>';
+    for(const r of sorted) tableHtml += `<tr><td>${r['Department']}</td><td>${r['Position']}</td><td>${r['Priority']}</td><td>${r['Status']}</td><td>${r['Hiring Manager']}</td><td>${r['Recruiter']}</td></tr>`;
+    tableHtml += '</tbody></table></div>';
+    document.getElementById('k2Table').innerHTML = tableHtml;
+  } else {
+    document.getElementById('k2Table').innerHTML = '<p style="color:#888">All positions have K2 submitted.</p>';
+  }
+}
+
+// ==================== EXPORT ====================
+function exportAll() {
+  const wb = XLSX.utils.book_new();
+  const data = filteredData.main;
+  const ws = XLSX.utils.json_to_sheet(data.map(r => ({
+    BU: r['BU'], Department: r['Department'], Position: r['Position'], Status: r['Status'],
+    'Status Group': r['Status Group'], Priority: r['Priority'], Recruiter: r['Recruiter'],
+    'Hiring Manager': r['Hiring Manager'], 'Worker Type': r['Worker Type'], 'Job Grade': r['Job Grade'],
+    'Open Days': r['Open Days'], 'Days vs Target': r['Days vs Target'], SLA: r['SLA'],
+    Channel: r['Channel'], 'Opening Type': r['Opening Type']
+  })));
+  XLSX.utils.book_append_sheet(wb, ws, 'Recruitment Data');
+  XLSX.writeFile(wb, 'recruitment_dashboard_export.xlsx');
+}
+
+// ==================== INDEXEDDB ====================
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('RecruitmentDashboard', 1);
+    req.onupgradeneeded = () => { if(!req.result.objectStoreNames.contains('handles')) req.result.createObjectStore('handles'); };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function saveFileHandle(handle) {
+  try { const db = await openDB(); const tx = db.transaction('handles','readwrite'); tx.objectStore('handles').put(handle, 'recruitmentFile'); } catch(e) { console.warn('Could not save handle:', e); }
+}
+
+async function restoreFileHandle() {
+  try {
+    const db = await openDB();
+    const tx = db.transaction('handles','readonly');
+    const handle = await new Promise((res, rej) => { const r = tx.objectStore('handles').get('recruitmentFile'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+    if(handle) {
+      console.log('Found saved file handle:', handle.name);
+      try {
+        if(typeof handle.queryPermission === 'function') {
+          const perm = await handle.queryPermission({mode:'read'});
+          if(perm === 'granted') { savedFileHandle = handle; const file = await handle.getFile(); await processFile(file); return true; }
+          else if(perm === 'prompt') { const newPerm = await handle.requestPermission({mode:'read'}); if(newPerm === 'granted') { savedFileHandle = handle; const file = await handle.getFile(); await processFile(file); return true; } }
+        } else {
+          savedFileHandle = handle; const file = await handle.getFile(); await processFile(file); return true;
+        }
+      } catch(e) { console.warn('Permission check failed, trying direct access:', e); try { savedFileHandle = handle; const file = await handle.getFile(); await processFile(file); return true; } catch(e2) { console.error('Direct access also failed:', e2); } }
+    }
+  } catch(e) { console.log('No saved handle or error:', e); }
+  return false;
+}
+
+// ==================== DRAG & DROP ====================
+const uploadBox = document.getElementById('uploadBox');
+if(uploadBox) {
+  uploadBox.addEventListener('dragover', e => { e.preventDefault(); uploadBox.classList.add('dragover'); });
+  uploadBox.addEventListener('dragleave', () => uploadBox.classList.remove('dragover'));
+  uploadBox.addEventListener('drop', e => { e.preventDefault(); uploadBox.classList.remove('dragover'); const file = e.dataTransfer.files[0]; if(file) processFile(file); });
+}
+
+// ==================== INIT ====================
+window.addEventListener('DOMContentLoaded', async () => {
+  console.log('Page loaded, checking for saved file...');
+  const restored = await restoreFileHandle();
+  if(!restored) console.log('No auto-load, showing upload page');
+});
+</script>
+</body>
+</html>
